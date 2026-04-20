@@ -3,21 +3,17 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using HarmonyLib;
-using UnityEngine;
 
 namespace SRML.Patches
 {
     [HarmonyPatch]
     internal static class EnumInfoPatch
     {
-        static EnumInfoPatch()
-        {
-        }
         static MethodBase TargetMethod()
         {
             return AccessTools.Method(Type.GetType("System.Enum"), "GetCachedValuesAndNames");
-
         }
+
         static void FixEnum(object type, ref ulong[] oldValues, ref string[] oldNames)
         {
             var enumType = type as Type;
@@ -38,7 +34,7 @@ namespace SRML.Patches
                 Array.Sort(oldValues, oldNames, Comparer<ulong>.Default);
             }
         }
-        
+
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
             using (var enumerator = instructions.GetEnumerator())

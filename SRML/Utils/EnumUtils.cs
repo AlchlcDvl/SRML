@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace SRML.Utils
 {
@@ -216,7 +217,7 @@ namespace SRML.Utils
             List<T> enums = new List<T>();
 
             foreach (string name in GetAllNames<T>())
-                enums.Add(Parse<T>(name, errorReturn));
+                enums.Add(Parse(name, errorReturn));
 
             return enums.ToArray();
         }
@@ -266,6 +267,21 @@ namespace SRML.Utils
         public static T GetMaxValue<T>() where T : System.Enum
         {
             return GetAll<T>().Max();
+        }
+
+        public unsafe static long FastCastToLong<T>(T enumValue) where T : unmanaged, System.Enum
+        {
+            var size = Marshal.SizeOf<T>();
+            var ptr = &enumValue;
+
+            switch (size)
+            {
+                case 1: return *(byte*)ptr;
+                case 2: return *(short*)ptr;
+                case 4: return *(int*)ptr;
+                case 8: return *(long*)ptr;
+                default: throw new NotSupportedException($"Unsupported enum size: {size} bytes");
+            }
         }
     }
 }

@@ -8,9 +8,6 @@ using SRML.Utils;
 using SRML.Utils.Enum;
 using SRML.Config;
 using Newtonsoft.Json.Linq;
-using UnityEngine.Rendering;
-using System.Runtime.InteropServices;
-using static ModDirector;
 
 namespace SRML
 {
@@ -20,10 +17,16 @@ namespace SRML
 
         internal static readonly Dictionary<string, SRMod> Mods = new Dictionary<string, SRMod>();
 
+        /// <summary>
+        /// Gets a collection of loaded mods.
+        /// </summary>
         public static IEnumerable<SRModInfo> LoadedMods => Mods.Select(x => x.Value.ModInfo);
 
         private static List<string> loadOrder = new List<string>();
 
+        /// <summary>
+        /// Gets a value that indicates the current load step of the mod loading process.
+        /// </summary>
         public static LoadingStep CurrentLoadingStep { get; private set; }
 
         /// <summary>
@@ -53,6 +56,7 @@ namespace SRML
             foreach (string jsonFile in Directory.GetFiles(FileSystem.ModPath, ModJson, SearchOption.AllDirectories))
             {
                 ProtoMod mod = ProtoMod.ParseFromJson(jsonFile);
+
                 if (foundMods.Add(mod))
                     mod.encounteredError = new Exception($"Found mod with duplicate id {mod.id} in {jsonFile}!");
             }
@@ -69,7 +73,7 @@ namespace SRML
             DependencyChecker.CheckDependencies(foundMods);
 
             // Start loading the assemblies
-            // mods are currently in an order that ensures attribute modinfos get first picks
+            // mods are currently in an order that ensures attribute mod infos get first picks
             DiscoverAndLoadAssemblies(foundMods);
 
             // now that every assembly has been found and verified, loading can commence in order
@@ -91,7 +95,6 @@ namespace SRML
         /// <returns>Whether or not the mod exists</returns>
         public static bool IsModPresent(string modid) => Mods.Keys.Any((x) => modid == x);
 
-
         /// <summary>
         /// Gets the associated <see cref="SRModInfo"/> for the associated <paramref name="modid"/>
         /// </summary>
@@ -105,10 +108,10 @@ namespace SRML
             return entryType != default;
         }
 
-        internal static void DiscoverAndLoadAssemblies(ICollection<ProtoMod> protomods)
+        internal static void DiscoverAndLoadAssemblies(ICollection<ProtoMod> protoMods)
         {
             HashSet<AssemblyInfo> foundAssemblies = new HashSet<AssemblyInfo>();
-            foreach (ProtoMod mod in protomods)
+            foreach (ProtoMod mod in protoMods)
             {
                 if (mod.encounteredError != null)
                     continue;
@@ -126,14 +129,14 @@ namespace SRML
                 }
                 else
                 {
-                    string fullpath = Path.Combine(mod.path, mod.entryFile);
+                    string fullPath = Path.Combine(mod.path, mod.entryFile);
 
                     // there's a chance a file JSON already claimed this assembly as its own, so overwrite that if that's the case
-                    AssemblyInfo existing = foundAssemblies.FirstOrDefault(x => x.Path == fullpath);
+                    AssemblyInfo existing = foundAssemblies.FirstOrDefault(x => x.Path == fullPath);
                     if (existing != null)
                         existing.mods.Add(mod);
                     else
-                        foundAssemblies.Add(new AssemblyInfo(AssemblyName.GetAssemblyName(fullpath), fullpath, mod));
+                        foundAssemblies.Add(new AssemblyInfo(AssemblyName.GetAssemblyName(fullPath), fullPath, mod));
                 }
             }
 
@@ -142,14 +145,14 @@ namespace SRML
 
             try
             {
-                // find an entrytype for each mod
+                // find an entry type for each mod
                 // attribute mods gets first pick for mod entry points, followed by embedded, followed by external
                 foreach (AssemblyInfo assembly in foundAssemblies)
                 {
                     Assembly a = assembly.LoadAssembly();
                     foreach (ProtoMod mod in assembly.AllMods)
                     {
-                        if ((mod.entryType != null && mod.entryType.Assembly.FullName != a.FullName) || !TryGetEntryType(a, out Type entryType, protomods))
+                        if ((mod.entryType != null && mod.entryType.Assembly.FullName != a.FullName) || !TryGetEntryType(a, out Type entryType, protoMods))
                             continue;
 
                         assembly.IsModAssembly = true;
@@ -157,7 +160,7 @@ namespace SRML
                     }
                 }
 
-                foreach (ProtoMod mod in protomods)
+                foreach (ProtoMod mod in protoMods)
                 {
                     if (mod.encounteredError == null && mod.entryType == null)
                         mod.encounteredError = new EntryPointNotFoundException($"Could not find a suitable entry point for '{mod}'");
@@ -211,8 +214,8 @@ namespace SRML
                 {
                     entryPoint = (IModEntryPoint)Activator.CreateInstance(entryType);
 
-                    if (entryPoint is ModEntryPoint)
-                        ((ModEntryPoint)entryPoint).ConsoleInstance = new Console.Console.ConsoleInstance(modInfo.name);
+                    if (entryPoint is ModEntryPoint modEntryPoint)
+                        modEntryPoint.ConsoleInstance = new Console.Console.ConsoleInstance(modInfo.name);
                 }
                 catch (Exception ex)
                 {
@@ -221,12 +224,14 @@ namespace SRML
                 }
             }
 
-            SRMod newmod = new SRMod(parsedModInfo, entryPoint, Path.Combine(modInfo.path, modInfo.entryFile));
-            newmod.exception = modInfo.encounteredError;
-            newmod.ModInfo.LoadState = modInfo.encounteredError == null ? SRModInfo.State.INITIALIZED : SRModInfo.State.INITIALIZATION_ERROR;
+            SRMod newMod = new SRMod(parsedModInfo, entryPoint, Path.Combine(modInfo.path, modInfo.entryFile))
+            {
+                exception = modInfo.encounteredError
+            };
+            newMod.ModInfo.LoadState = modInfo.encounteredError == null ? SRModInfo.State.INITIALIZED : SRModInfo.State.INITIALIZATION_ERROR;
 
-            Mods.Add(modInfo.id, newmod);
-            return newmod;
+            Mods.Add(modInfo.id, newMod);
+            return newMod;
         }
 
         internal static void PreLoadMods()
@@ -505,7 +510,7 @@ namespace SRML
             }
 
             /// <summary>
-            /// Create a protomod from json info
+            /// Create a ProtoMod from json info
             /// </summary>
             /// <param name="jsonFile">Path of the json file</param>
             /// <returns>The parsed <see cref="ProtoMod"/></returns>
@@ -520,7 +525,7 @@ namespace SRML
             }
 
             /// <summary>
-            /// Try to create protomods from a DLL's attributes and embedded files
+            /// Try to create ProtoMods from a DLL's attributes and embedded files
             /// </summary>
             /// <param name="dllFile">Path to the DLL file to process</param>
             /// <param name="mods">The parsed <see cref="ProtoMod"/>s</param>
@@ -586,7 +591,7 @@ namespace SRML
             }
 
             /// <summary>
-            /// Turn the protomod into a proper <see cref="SRModInfo"/> instance
+            /// Turn the ProtoMod into a proper <see cref="SRModInfo"/> instance
             /// </summary>
             /// <returns>Converted <see cref="SRModInfo"/></returns>
             public SRModInfo ToModInfo()
@@ -657,7 +662,7 @@ namespace SRML
                     }
                     catch (Exception e)
                     {
-                        if (pm.id == null || pm.id == string.Empty)
+                        if (string.IsNullOrEmpty(pm.id))
                             throw new Exception($"Error parsing unknown basic mod information! {e}");
                         else
                             throw new Exception($"Error parsing basic mod information for {pm.id}! {e}");

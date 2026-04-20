@@ -1,14 +1,10 @@
 ﻿using System;
-using System.CodeDom;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace SRML.Utils.Enum
 {
     public class EnumHolderAttribute : Attribute
     {
-        public bool shouldCategorize = true;
+        internal bool shouldCategorize = true;
 
         public EnumHolderAttribute()
         {
@@ -19,4 +15,4 @@ namespace SRML.Utils.Enum
             this.shouldCategorize = shouldCategorize;
         }
     }
-}   
+}
