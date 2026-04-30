@@ -28,6 +28,7 @@ namespace SRML.Patches
                     newValues.Add(pair.Key);
                     newNames.Add(pair.Value);
                 }
+
                 oldValues = newValues.ToArray();
                 oldNames = newNames.ToArray();
 
@@ -42,21 +43,18 @@ namespace SRML.Patches
                 while (enumerator.MoveNext())
                 {
                     var v = enumerator.Current;
-                    if (v.operand is MethodInfo me&&me.Name=="Sort")
+                    yield return v;
+
+                    if (v.operand is MethodInfo me && me.Name == "Sort")
                     {
-                        yield return v;
                         enumerator.MoveNext();
                         v = enumerator.Current;
                         var labels = v.labels;
                         v.labels = new List<Label>();
-                        yield return new CodeInstruction(OpCodes.Ldarg_0) { labels = labels};
+                        yield return new CodeInstruction(OpCodes.Ldarg_0) { labels = labels };
                         yield return new CodeInstruction(OpCodes.Ldloca, 1);
                         yield return new CodeInstruction(OpCodes.Ldloca, 2);
-                        yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(EnumInfoPatch), "FixEnum"));
-                        yield return v;
-                    }
-                    else
-                    {
+                        yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(EnumInfoPatch), nameof(FixEnum)));
                         yield return v;
                     }
                 }

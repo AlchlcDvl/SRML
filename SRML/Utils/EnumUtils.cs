@@ -269,7 +269,7 @@ namespace SRML.Utils
             return GetAll<T>().Max();
         }
 
-        public unsafe static long FastCastToLong<T>(T enumValue) where T : unmanaged, System.Enum
+        internal unsafe static long FastCastToLong<T>(T enumValue) where T : unmanaged, System.Enum
         {
             var size = Marshal.SizeOf<T>();
             var ptr = &enumValue;

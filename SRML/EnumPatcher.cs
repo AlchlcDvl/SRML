@@ -92,14 +92,19 @@ namespace SRML
             value = (ulong)Convert.ToInt64(value, CultureInfo.InvariantCulture);
 
             if (!patches.TryGetValue(enumType, out var patch))
-            {
-                patch = new EnumPatch();
-                patches.Add(enumType, patch);
-            }
+                patches[enumType] = patch = CreatePatch(enumType);
 
             ClearEnumCache(enumType);
 
             patch.AddValue((ulong)value, name);
+        }
+
+        private static EnumPatch CreatePatch(Type enumType)
+        {
+            var patch = new EnumPatch();
+            var underlying = Enum.GetUnderlyingType(enumType);
+            patch.signed = underlying == typeof(sbyte) || underlying == typeof(short) || underlying == typeof(int) || underlying == typeof(long);
+            return patch;
         }
 
         public static void AddEnumValueWithAlternatives<T>(object value, string name) where T : Enum => AddEnumValueWithAlternatives(typeof(T), value, name);
@@ -185,7 +190,7 @@ namespace SRML
         {
             if (enumType == null) throw new ArgumentNullException(nameof(enumType));
             if (!enumType.IsEnum) throw new Exception($"{enumType} is not a valid Enum!");
-            if (!patches.TryGetValue(enumType, out var patch)) throw new ArgumentException($"Can't register aliases in {enumType} for an unregistered value!");
+            if (!patches.TryGetValue(enumType, out var patch)) throw new ArgumentException($"Can't register aliases for an unpatched enum type {enumType.Name}!");
 
             ClearEnumCache(enumType);
             patch.AddAliases((ulong)value, aliases);
@@ -206,19 +211,17 @@ namespace SRML
             internal bool signed;
 
             public void AddValue(ulong enumValue, string name)
-            {
-                if (!values.TryGetValue(enumValue, out var list))
-                    values[enumValue] = list = new HashSet<string>();
-
-                list.Add(name);
-            }
+                => EnsureSet(enumValue).Add(name);
 
             public void AddAliases(ulong enumValue, IEnumerable<string> aliases)
-            {
-                if (!values.TryGetValue(enumValue, out var list))
-                    values[enumValue] = list = new HashSet<string>();
+                => EnsureSet(enumValue).UnionWith(aliases);
 
-                list.UnionWith(aliases);
+            private HashSet<string> EnsureSet(ulong enumValue)
+            {
+                if (!values.TryGetValue(enumValue, out var set))
+                    values[enumValue] = set = new HashSet<string>();
+
+                return set;
             }
 
             public List<KeyValuePair<ulong, string>> GetPairs()

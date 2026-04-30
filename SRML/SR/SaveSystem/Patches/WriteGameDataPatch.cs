@@ -7,15 +7,10 @@ using SRML.SR.SaveSystem.Data.Ammo;
 using SRML.SR.SaveSystem.Data.Appearances;
 using SRML.SR.SaveSystem.Data.Partial;
 using SRML.SR.SaveSystem.Utils;
-using SRML.Utils;
-using UnityEngine;
-using VanillaActorData = MonomiPark.SlimeRancher.Persist.ActorDataV09;
-using VanillaGadgetData = MonomiPark.SlimeRancher.Persist.PlacedGadgetV08;
-using VanillaPlotData = MonomiPark.SlimeRancher.Persist.LandPlotV08;
+
 namespace SRML.SR.SaveSystem.Patches
 {
-    [HarmonyPatch(typeof(GameV12))]
-    [HarmonyPatch("WriteGameData")]
+    [HarmonyPatch(typeof(GameV12), "WriteGameData")]
     internal static class WriteGameDataPatch
     {
         public static void Prefix(GameV12 __instance, ref RemovalData __state)
@@ -23,40 +18,37 @@ namespace SRML.SR.SaveSystem.Patches
             __state = new RemovalData();
 
             __state.AddAndRemoveWhereCustom(__instance.actors);
-            __state.AddAndRemoveWhere(__instance.world.placedGadgets,(x)=>SaveRegistry.IsCustom(x.Value)||ModdedStringRegistry.IsModdedString(x.Key));
-            __state.AddAndRemoveWhere(__instance.ranch.plots,(x)=>SaveRegistry.IsCustom(x)||ModdedStringRegistry.IsModdedString(x.id));
+            __state.AddAndRemoveWhere(__instance.world.placedGadgets, x => SaveRegistry.IsCustom(x.Value) || ModdedStringRegistry.IsModdedString(x.Key));
+            __state.AddAndRemoveWhere(__instance.ranch.plots, x => SaveRegistry.IsCustom(x) || ModdedStringRegistry.IsModdedString(x.id));
             __state.AddAndRemoveWhere(__instance.world.gordos, x => SaveRegistry.IsCustom(x.Value) || ModdedStringRegistry.IsModdedString(x.Key));
             __state.AddAndRemoveWhere(__instance.world.treasurePods, x => SaveRegistry.IsCustom(x.Value) || ModdedStringRegistry.IsModdedString(x.Key));
             __state.AddAndRemoveWhere(__instance.world.offers, x => SaveRegistry.IsCustom(x.Value) || ModdedIDRegistry.IsModdedID(x.Key) || ExchangeOfferRegistry.IsCustom(x.Value));
-            __state.AddAndRemoveWhere(__instance.world.econSaturations, (x) => ModdedIDRegistry.IsModdedID(x.Key));
+            __state.AddAndRemoveWhere(__instance.world.econSaturations, x => ModdedIDRegistry.IsModdedID(x.Key));
             __state.AddAndRemoveWhere(__instance.world.lastOfferRancherIds, ExchangeOfferRegistry.IsCustom);
             __state.AddAndRemoveWhere(__instance.world.pendingOfferRancherIds, ExchangeOfferRegistry.IsCustom);
 
             __state.AddAndRemoveWhereCustom(__instance.player.upgrades);
             __state.AddAndRemoveWhereCustom(__instance.player.availUpgrades);
-            __state.AddAndRemoveWhere(__instance.player.upgradeLocks,
-                (x) => ModdedIDRegistry.IsModdedID(x.Key));
+            __state.AddAndRemoveWhere(__instance.player.upgradeLocks, x => ModdedIDRegistry.IsModdedID(x.Key));
 
             __state.AddAndRemoveWhereCustom(__instance.player.blueprints);
             __state.AddAndRemoveWhereCustom(__instance.player.availBlueprints);
-            __state.AddAndRemoveWhere(__instance.player.blueprintLocks,(x)=> ModdedIDRegistry.IsModdedID(x.Key));
-            
-            __state.AddAndRemoveWhere(__instance.player.progress,(x)=> ModdedIDRegistry.IsModdedID(x.Key));
-            __state.AddAndRemoveWhere(__instance.player.delayedProgress,(x)=> ModdedIDRegistry.IsModdedID(x.Key));
+            __state.AddAndRemoveWhere(__instance.player.blueprintLocks, x => ModdedIDRegistry.IsModdedID(x.Key));
 
-            __state.AddAndRemoveWhere(__instance.player.gadgets,(x)=> ModdedIDRegistry.IsModdedID(x.Key));
+            __state.AddAndRemoveWhere(__instance.player.progress, x => ModdedIDRegistry.IsModdedID(x.Key));
+            __state.AddAndRemoveWhere(__instance.player.delayedProgress, x => ModdedIDRegistry.IsModdedID(x.Key));
 
-            __state.AddAndRemoveWhere(__instance.player.craftMatCounts,(x)=> ModdedIDRegistry.IsModdedID(x.Key));
+            __state.AddAndRemoveWhere(__instance.player.gadgets, x => ModdedIDRegistry.IsModdedID(x.Key));
+
+            __state.AddAndRemoveWhere(__instance.player.craftMatCounts, x => ModdedIDRegistry.IsModdedID(x.Key));
 
             __state.AddAndRemoveWhereCustom(__instance.player.unlockedZoneMaps);
 
-            __state.AddAndRemoveWhere(__instance.player.mail, (x) => MailRegistry.GetModForMail(x.messageKey) != null);
+            __state.AddAndRemoveWhere(__instance.player.mail, x => MailRegistry.GetModForMail(x.messageKey) != null);
 
-            __state.AddAndRemoveWhere(__instance.pedia.unlockedIds,(x)=> ModdedIDRegistry.IsModdedID(Enum.Parse(typeof(PediaDirector.Id),x)));
-            __state.AddAndRemoveWhere(__instance.pedia.completedTuts,  (x) => ModdedIDRegistry.IsModdedID(Enum.Parse(typeof(TutorialDirector.Id), x)));
-            __state.AddAndRemoveWhere(__instance.pedia.popupQueue, (x) => ModdedIDRegistry.IsModdedID(Enum.Parse(typeof(TutorialDirector.Id), x)));
-
-            
+            __state.AddAndRemoveWhere(__instance.pedia.unlockedIds, x => ModdedIDRegistry.IsModdedID(Enum.Parse(typeof(PediaDirector.Id),x)));
+            __state.AddAndRemoveWhere(__instance.pedia.completedTuts, x => ModdedIDRegistry.IsModdedID(Enum.Parse(typeof(TutorialDirector.Id), x)));
+            __state.AddAndRemoveWhere(__instance.pedia.popupQueue, x => ModdedIDRegistry.IsModdedID(Enum.Parse(typeof(TutorialDirector.Id), x)));
 
             foreach (var data in AmmoDataUtils.GetAllAmmoData(__instance))
             {
@@ -68,10 +60,7 @@ namespace SRML.SR.SaveSystem.Patches
                 {
                     var moddedData = AmmoDataUtils.RipOutModdedData(data);
 
-                    __state.addBacks.Add(() =>
-                    {
-                        AmmoDataUtils.SpliceAmmoData(data, moddedData);
-                    });
+                    __state.addBacks.Add(() => AmmoDataUtils.SpliceAmmoData(data, moddedData));
                 }
             }
 
@@ -123,18 +112,13 @@ namespace SRML.SR.SaveSystem.Patches
             __state.addBacks.Add(() => partialAppearance.Push(__instance.appearances));
         }
 
-        public static void Postfix(GameV11 __instance, ref RemovalData __state)
+        public static void Postfix(ref RemovalData __state)
         {
             __state.AddAllBack();
-        }   
-
-
-
-
+        }
 
         public class RemovalData
         {
-
             public List<Action> addBacks = new List<Action>();
 
             public void AddAndRemoveWhere<K, V>(Dictionary<K, V> original,
